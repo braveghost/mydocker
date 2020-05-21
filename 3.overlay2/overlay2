@@ -1,0 +1,191 @@
+
+overlay共享数据方式是通过硬连接
+而overlay2是通过每层的 lower文件
+
+1. docker inspect golang:latest查看Layers字段
+2. cat /var/lib/docker/image/overlay2/distribution/v2metadata-by-diffid/sha256/e40d297cf5f89a9822af4c2f63caa2f2085d5aa188137506918e603774b083cb
+   查看layer id
+3. ls /var/lib/docker/overlay2/90e3a0999bcb8ba50f434d29709dd835013d467de2915fb90eae2b3df8dbc618/ 查看对应的layer数据
+
+
+overlayfs在linux主机上只有两层，一个目录在下层，用来保存镜像(docker)，另外一个目录在上层，用来存储容器信息
+底层的目录叫做lowerdir，顶层的目录称之为upperdir，对外提供统一的文件系统为merged。
+当需要修改一个文件时，使用CoW将文件从只读的Lower复制到可写的Upper进行修改，这个复制出来的临时目录就是Workdir，结果也保存在Upper层
+
+利用 rootfs 中的每个diff_id 和历史信息计算出与之对应的内容寻址的索引(chainID)
+chaiID关联了layer层，进而关联到每一个镜像层的镜像文件
+
+所有原数据
+cat /var/lib/docker/image/overlay2/imagedb/content/sha256/87058f91e429b942dae380829661e08d07cb3e03d6108ad1f18c016485765a57
+{
+    "architecture":"amd64",
+    "config":{
+        "Hostname":"",
+        "Domainname":"",
+        "User":"",
+        "AttachStdin":false,
+        "AttachStdout":false,
+        "AttachStderr":false,
+        "Tty":false,
+        "OpenStdin":false,
+        "StdinOnce":false,
+        "Env":[
+            "PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "GOLANG_VERSION=1.14.2",
+            "GOPATH=/go"
+        ],
+        "Cmd":[
+            "bash"
+        ],
+        "ArgsEscaped":true,
+        "Image":"sha256:2421885b04daf2f5095c46fe1889887d89e5ab77157e54423d97ea6816db54b6",
+        "Volumes":null,
+        "WorkingDir":"/go",
+        "Entrypoint":null,
+        "OnBuild":null,
+        "Labels":null
+    },
+    "container":"0f95f0a471de0345bbff0c74a20c135b067365c15cf986dbb7db5d892388a801",
+    "container_config":{
+        "Hostname":"",
+        "Domainname":"",
+        "User":"",
+        "AttachStdin":false,
+        "AttachStdout":false,
+        "AttachStderr":false,
+        "Tty":false,
+        "OpenStdin":false,
+        "StdinOnce":false,
+        "Env":[
+            "PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "GOLANG_VERSION=1.14.2",
+            "GOPATH=/go"
+        ],
+        "Cmd":[
+            "/bin/sh",
+            "-c",
+            "echo "Hello world" > /tmp/newfile"
+        ],
+        "Image":"sha256:2421885b04daf2f5095c46fe1889887d89e5ab77157e54423d97ea6816db54b6",
+        "Volumes":null,
+        "WorkingDir":"/go",
+        "Entrypoint":null,
+        "OnBuild":null,
+        "Labels":null
+    },
+    "created":"2020-04-29T09:09:57.055975983Z",
+    "docker_version":"19.03.5",
+    "history":[
+        {
+            "created":"2020-04-23T00:20:17.391234962Z",
+            "created_by":"/bin/sh -c #(nop) ADD file:f086177965196842af3c15f50a7f6ad7912aaa7bf73a60b1d00e3129265eec9a in / "
+        },
+        {
+            "created":"2020-04-23T00:20:17.678021368Z",
+            "created_by":"/bin/sh -c #(nop)  CMD ["bash"]",
+            "empty_layer":true
+        },
+        {
+            "created":"2020-04-23T00:50:01.120306327Z",
+            "created_by":"/bin/sh -c apt-get update && apt-get install -y --no-install-recommends 	ca-certificates 	curl 	netbase 	wget 	&& rm -rf /var/lib/apt/lists/*"
+        },
+        {
+            "created":"2020-04-23T00:50:06.967412151Z",
+            "created_by":"/bin/sh -c set -ex; 	if ! command -v gpg > /dev/null; then 	apt-get update; 	apt-get install -y --no-install-recommends 	gnupg 	dirmngr 	; 	rm -rf /var/lib/apt/lists/*; 	fi"
+        },
+        {
+            "created":"2020-04-23T00:50:29.128545629Z",
+            "created_by":"/bin/sh -c apt-get update && apt-get install -y --no-install-recommends 	git  mercurial 	openssh-client 	subversion 	procps 	&& rm -rf /var/lib/apt/lists/*"
+        },
+        {
+            "created":"2020-04-23T20:04:59.970325467Z",
+            "created_by":"/bin/sh -c apt-get update && apt-get install -y --no-install-recommends 	g++ 	gcc  libc6-dev 	make 	pkg-config 	&& rm -rf /var/lib/apt/lists/*"
+        },
+        {
+            "created":"2020-04-23T20:05:00.659802353Z",
+            "created_by":"/bin/sh -c #(nop)  ENV GOLANG_VERSION=1.14.2",
+            "empty_layer":true
+        },
+        {
+            "created":"2020-04-23T20:05:13.875701475Z",
+            "created_by":"/bin/sh -c set -eux; 	dpkgArch="$(dpkg --print-architecture)";  case "${dpkgArch##*-}" in 	amd64) goRelArch='linux-amd64'; goRelSha256='6272d6e940ecb71ea5636ddb5fab3933e087c1356173c61f4a803895e947ebb3' ;;  armhf) goRelArch='linux-armv6l'; goRelSha256='eb4550ba741506c2a4057ea4d3a5ad7ed5a887de67c7232f1e4795464361c83c' ;;  arm64) goRelArch='linux-arm64'; goRelSha256='bb6d22fe5806352c3d0826676654e09b6e41eb1af52e8d506d3fa85adf7f8d88' ;;  i386) goRelArch='linux-386'; goRelSha256='cab5f51e6ffb616c6ee963c3d0650ca4e3c4108307c44f2baf233fcb8ff098f6' ;;  ppc64el) goRelArch='linux-ppc64le'; goRelSha256='48c22268c81ced9084a43bbe2c1596d3e636b5560b30a32434a7f15e561de160' ;;  s390x) goRelArch='linux-s390x'; goRelSha256='501cc919648c9d85b901963303c5061ea6814c80f0d35fda9e62980d3ff58cf4' ;;  *) goRelArch='src'; goRelSha256='98de84e69726a66da7b4e58eac41b99cbe274d7e8906eeb8a5b7eb0aadee7f7c';  echo >&2; echo >&2 "warning: current architecture ($dpkgArch) does not have a corresponding Go binary release; will be building from source"; echo >&2 ;; 	esac;  url="https://golang.org/dl/go${GOLANG_VERSION}.${goRelArch}.tar.gz"; 	wget -O go.tgz "$url";  echo "${goRelSha256} *go.tgz" | sha256sum -c -; 	tar -C /usr/local -xzf go.tgz; 	rm go.tgz;  if [ "$goRelArch" = 'src' ]; then 	echo >&2; 	echo >&2 'error: UNIMPLEMENTED';  echo >&2 'TODO install golang-any from jessie-backports for GOROOT_BOOTSTRAP (and uninstall after build)';  echo >&2; 	exit 1; 	fi; 	export PATH="/usr/local/go/bin:$PATH"; 	go version"
+        },
+        {
+            "created":"2020-04-23T20:05:14.311383777Z",
+            "created_by":"/bin/sh -c #(nop)  ENV GOPATH=/go",
+            "empty_layer":true
+        },
+        {
+            "created":"2020-04-23T20:05:14.515338845Z",
+            "created_by":"/bin/sh -c #(nop)  ENV PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "empty_layer":true
+        },
+        {
+            "created":"2020-04-23T20:05:15.320412973Z",
+            "created_by":"/bin/sh -c mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH""
+        },
+        {
+            "created":"2020-04-23T20:05:15.522339486Z",
+            "created_by":"/bin/sh -c #(nop) WORKDIR /go",
+            "empty_layer":true
+        },
+        {
+            "created":"2020-04-29T09:09:57.055975983Z",
+            "created_by":"/bin/sh -c echo "Hello world" > /tmp/newfile"
+        }
+    ],
+    "os":"linux",
+    "rootfs":{
+        "type":"layers",
+        "diff_ids":[
+            "sha256:e40d297cf5f89a9822af4c2f63caa2f2085d5aa188137506918e603774b083cb",
+            "sha256:5f77a51ade6af1c864ed52812e088e9f113fae0de8d4da9992b6862ec15919a8",
+            "sha256:9794a3b3ed45179d4ec1b8b7d422f315dbabb4f9d3316494b8be4f0071463c2b",
+            "sha256:8967306e673ef8aac2897fb8fe5868459671f82c323f1f1d307b63210023c55b",
+            "sha256:ef234633eec2c261202d8aacec2a3e6b43c5cb401804b2f89b9580555ef9b9db",
+            "sha256:f0c38edb3fff36bfc97c23d4c7375d87aafdc4e1329cb702832412e780c084af",
+            "sha256:6e69dbdef94bd3fd253050913229a7e81114cd85d1a15971613c9fa0426f2baf",
+            "sha256:2e8a44817b37a3be46803e5e63ff43a032334ce97c7cb6c6941af63936e68ddd"
+        ]
+    }
+}
+
+
+
+1、通过chainID查找diffID
+chainID规则：
+如果该镜像层是最底层(没有父镜像层)，该层的 diffID 便是 chainID。
+该镜像层的 chainID 计算公式为 chainID(n)=SHA256(chain(n-1) diffID(n))，也就是根据父镜像层的 chainID 加上一个空格和当前层的 diffID，再计算 SHA256 校验码。
+2、即第一个chainID和diffID相同
+3、cat /var/lib/docker/image/overlay2/layerdb/sha256/e40d297cf5f89a9822af4c2f63caa2f2085d5aa188137506918e603774b083cb/cache-id
+e531aed14ddca4f9d285cd12581abf130af25474da4dfae5454ca41f601651c7    # 就是diffID
+4、第一层ls /var/lib/docker/overlay2/e531aed14ddca4f9d285cd12581abf130af25474da4dfae5454ca41f601651c7
+5、第二层6a64eac59d7ddb05685218d4432f2e770f7b09ef10e80dd377fe466a28e74b81
+sha256(父级chainID + " " + 当前diffID)
+例如   sha256:e40d297cf5f89a9822af4c2f63caa2f2085d5aa188137506918e603774b083cb sha256:5f77a51ade6af1c864ed52812e088e9f113fae0de8d4da9992b6862ec15919a8
+6a64eac59d7ddb05685218d4432f2e770f7b09ef10e80dd377fe466a28e74b81
+6、ls /var/lib/docker/image/overlay2/layerdb/sha256/6a64eac59d7ddb05685218d4432f2e770f7b09ef10e80dd377fe466a28e74b81
+
+
+
+ls /var/lib/docker/overlay2/
+带init后缀的是夹在只读层和读写层之间，作用是专门存放/etc/hosts、/etc/resolv.conf等信息，需要这一层的原因是当容器启动时候，这些本该属于image层的文件或目录，比如hostname，用户需要修改，但是image层又不允许修改，所以启动时候通过单独挂载一层init层，通过修改init层中的文件达到修改这些文件目的。而这些修改往往只在当前容器生效，而在docker commit提交为镜像时候，并不会将init层提交。
+
+
+
+
+mkdir lower1 lower2 merged upper work
+echo "lover1.a" > lower1/a
+echo "lover1.b" > lower1/b
+echo "lover2.a" > lower2/a
+echo "upper.c" > upper/c
+
+注意lowerdir后的参数约靠后越在底层
+mount -t overlay overlay -o lowerdir=lower1:lower2,upperdir=upper,workdir=work merged
+挂载了一个名为overlay的overlay类型的文件系统，挂载点为merged目录。
+tree merged/
+for i in `ls merged`;do echo $i: `cat merged/$i`;done
+echo "d" > merged/d
+echo "e" > upper/e
+ls merged/
+ls upper/
