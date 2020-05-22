@@ -109,6 +109,18 @@ var (
 			return container.RemoveContainer()
 		},
 	}
+
+	// ps命令
+	listCommand = cli.Command{
+		Name:            "ps",
+		Usage:           "Init container process run user's rocess in container.Do not call it outside",
+		SkipFlagParsing: false,
+		Action: func(ctx *cli.Context) error {
+			// 容器删除
+			log.Infof("ps come on | %v", ctx.Args())
+			return container.ListContainer()
+		},
+	}
 	commitCommand = cli.Command{
 		Name:            "commit",
 		Usage:           "Init container process run user's rocess in container.Do not call it outside",
@@ -130,7 +142,7 @@ var (
 	}
 )
 
-func Run(tty bool, cmdArray []string, image, volume,name string, res *subsystems.ResourceConfig) {
+func Run(tty bool, cmdArray []string, image, volume, name string, res *subsystems.ResourceConfig) {
 	log.Infof("Run.Params | %v | %v | %v | %s", tty, cmdArray, res, image)
 	parent, writePipe := container.NewParentProcess(tty, volume, image)
 	if parent == nil {
@@ -156,8 +168,8 @@ func Run(tty bool, cmdArray []string, image, volume,name string, res *subsystems
 	//	log.Errorf("Run.Apply | %v", err)
 	//
 	//}
-	cname, err := container.RecordContainerMeta(parent.Process.Pid,name, cmdArray)
-	if err != nil{
+	cname, err := container.RecordContainerMeta(parent.Process.Pid, name, cmdArray)
+	if err != nil {
 		log.Errorf("Run.RecordContainerMeta | %v", err)
 		return
 	}
@@ -178,6 +190,7 @@ var Commands = []cli.Command{
 	runCommand,    // 运行容器
 	commitCommand, // 镜像打包
 	rmCommand,     // 删除容器
+	listCommand,   // 列表
 }
 
 func sendInitCommand(comArray []string, writePipe *os.File) {
@@ -189,6 +202,3 @@ func sendInitCommand(comArray []string, writePipe *os.File) {
 	}
 	log.Infof("sendInitCommand.Info | %v", writePipe.Close())
 }
-
-
-
