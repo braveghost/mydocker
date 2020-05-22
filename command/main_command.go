@@ -38,7 +38,11 @@ var (
 				Name:  "v",
 				Usage: "volumes",
 			},
-
+			// 容器名称
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "container name",
+			},
 
 			cli.StringFlag{
 				Name:  "m",
@@ -68,10 +72,12 @@ var (
 			if ttl && detach {
 				return errors.New("ttl && detach")
 			}
+			name := ctx.String("name")
 			Run(
 				ttl,
 				arr, ctx.String("image"),
 				ctx.String("v"),
+				name,
 				&subsystems.ResourceConfig{
 					MemoryLimit: ctx.String("m"),
 					CpuSet:      ctx.String("cpuset"),
@@ -124,7 +130,7 @@ var (
 	}
 )
 
-func Run(tty bool, cmdArray []string, image, volume string, res *subsystems.ResourceConfig) {
+func Run(tty bool, cmdArray []string, image, volume,name string, res *subsystems.ResourceConfig) {
 	log.Infof("Run.Params | %v | %v | %v | %s", tty, cmdArray, res, image)
 	parent, writePipe := container.NewParentProcess(tty, volume, image)
 	if parent == nil {
@@ -150,6 +156,11 @@ func Run(tty bool, cmdArray []string, image, volume string, res *subsystems.Reso
 	//	log.Errorf("Run.Apply | %v", err)
 	//
 	//}
+	cname, err := container.RecordContainerMeta(parent.Process.Pid,name, cmdArray)
+	if err != nil{
+		log.Errorf("Run.RecordContainerMeta | %v", err)
+		return
+	}
 
 	sendInitCommand(cmdArray, writePipe)
 	if tty {
@@ -158,6 +169,7 @@ func Run(tty bool, cmdArray []string, image, volume string, res *subsystems.Reso
 		log.Infof("Run.Wait | %v", parent.Wait())
 		_, workUrl := images.GetWriteWorkLayerOverlay()
 		container.DeleteWorkSpace(workUrl, volume)
+		container.DeleteContainerMeta(cname)
 	}
 }
 
@@ -177,3 +189,6 @@ func sendInitCommand(comArray []string, writePipe *os.File) {
 	}
 	log.Infof("sendInitCommand.Info | %v", writePipe.Close())
 }
+
+
+
