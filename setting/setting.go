@@ -2,7 +2,7 @@ package setting
 
 const (
 
-	EImagesPath ="/root/busybox"
-	EContainerPath = ""
+	EImagesPath ="/root/images"
+	EContainerPath = "/root/container"
 
 )

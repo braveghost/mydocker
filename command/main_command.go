@@ -6,7 +6,6 @@ import (
 	"github.com/urfave/cli"
 	"mydocker/container"
 	"mydocker/images"
-	"mydocker/setting"
 	"mydocker/subsystems"
 	"os"
 	"strings"
@@ -19,15 +18,28 @@ var (
 								 mydocker run -ti [command]`,
 		SkipFlagParsing: false,
 		Flags: []cli.Flag{
+			// 后台运行
+			cli.BoolFlag{
+				Name:  "d",
+				Usage: "detach container",
+			},
+			// 前台等待运行
 			cli.BoolFlag{
 				Name:  "ti",
 				Usage: "enable tty",
 			},
-			// volumes
+			// 指定镜像名称
 			cli.StringFlag{
-				Name: "v",
+				Name:  "image",
+				Usage: "image name",
+			},
+			// 卷
+			cli.StringFlag{
+				Name:  "v",
 				Usage: "volumes",
 			},
+
+
 			cli.StringFlag{
 				Name:  "m",
 				Usage: "memory limit",
@@ -50,13 +62,21 @@ var (
 			for _, v := range ctx.Args() {
 				arr = append(arr, v)
 			}
-			tty := ctx.Bool("ti")
-			volume := ctx.String("v")
-			Run(tty, arr,volume, &subsystems.ResourceConfig{
-				MemoryLimit: ctx.String("m"),
-				CpuSet:      ctx.String("cpuset"),
-				CpuShare:    ctx.String("cpushare"),
-			})
+
+			ttl := ctx.Bool("ti")
+			detach := ctx.Bool("d")
+			if ttl && detach {
+				return errors.New("ttl && detach")
+			}
+			Run(
+				ttl,
+				arr, ctx.String("image"),
+				ctx.String("v"),
+				&subsystems.ResourceConfig{
+					MemoryLimit: ctx.String("m"),
+					CpuSet:      ctx.String("cpuset"),
+					CpuShare:    ctx.String("cpushare"),
+				})
 			return nil
 		},
 	}
@@ -83,12 +103,30 @@ var (
 			return container.RemoveContainer()
 		},
 	}
+	commitCommand = cli.Command{
+		Name:            "commit",
+		Usage:           "Init container process run user's rocess in container.Do not call it outside",
+		SkipFlagParsing: false,
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "name",
+				Usage: "image name",
+			},
+		},
 
+		Action: func(ctx *cli.Context) error {
+			imageName := ctx.String("name")
+			// 容器删除
+			log.Infof("commit come on | %v", ctx.Args())
+			images.CommitImage(imageName)
+			return nil
+		},
+	}
 )
 
-func Run(tty bool, cmdArray []string, volume string, res *subsystems.ResourceConfig) {
-	log.Infof("Run.Params | %v | %v | %v", tty, cmdArray, res)
-	parent, writePipe := container.NewParentProcess(tty,volume)
+func Run(tty bool, cmdArray []string, image, volume string, res *subsystems.ResourceConfig) {
+	log.Infof("Run.Params | %v | %v | %v | %s", tty, cmdArray, res, image)
+	parent, writePipe := container.NewParentProcess(tty, volume, image)
 	if parent == nil {
 		log.Errorf("New parent process error")
 		return
@@ -114,16 +152,20 @@ func Run(tty bool, cmdArray []string, volume string, res *subsystems.ResourceCon
 	//}
 
 	sendInitCommand(cmdArray, writePipe)
-
-	log.Infof("Run.Wait | %v", parent.Wait())
-	upperUrl, workUrl := images.GetWriteWorkLayerOverlay(setting.EImagesPath)
-	container.DeleteWorkSpace(upperUrl, workUrl, volume)
+	if tty {
+		// ti参数前台等待
+		// 前台等待台运行
+		log.Infof("Run.Wait | %v", parent.Wait())
+		_, workUrl := images.GetWriteWorkLayerOverlay()
+		container.DeleteWorkSpace(workUrl, volume)
+	}
 }
 
 var Commands = []cli.Command{
-	initCommand, // 初始化容器
-	runCommand, // 运行容器
-	rmCommand, // 删除容器
+	initCommand,   // 初始化容器
+	runCommand,    // 运行容器
+	commitCommand, // 镜像打包
+	rmCommand,     // 删除容器
 }
 
 func sendInitCommand(comArray []string, writePipe *os.File) {

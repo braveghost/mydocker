@@ -3,13 +3,12 @@ package container
 import (
 	"github.com/Sirupsen/logrus"
 	"mydocker/images"
-	"mydocker/setting"
 	"os"
 	"syscall"
 )
 
 func RemoveContainer() error {
-	upperPath, workPath := images.GetWriteWorkLayerOverlay(setting.EImagesPath)
+	upperPath, workPath := images.GetWriteWorkLayerOverlay()
 
 	if err := syscall.Unmount(workPath,0);err != nil{
 		logrus.Errorf("RemoveContainer.Unmount | %s | %s", workPath, err.Error())

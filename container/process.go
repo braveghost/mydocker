@@ -1,12 +1,10 @@
 package container
 
 import (
-	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"mydocker/images"
-	"mydocker/setting"
 	"mydocker/subsystems"
 	"os"
 	"os/exec"
@@ -52,7 +50,7 @@ func RunContainerInitProcess() error {
 	return nil
 }
 
-func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, volume,image string) (*exec.Cmd, *os.File) {
 	readPipe, writePipe, err := NewPipe()
 	if err != nil {
 		log.Errorf("New pipe error %v", err)
@@ -70,13 +68,12 @@ func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File) {
 
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}
-
-	rootUrl := setting.EImagesPath
 	// images.NewWorkSpaceAufs
 	// aufs是老版本了，所以就没试过了，这里只用了overlay2
-	upperDir, workDir := images.NewWorkSpaceOverlay(rootUrl)
+	upperDir, workDir := images.NewWorkSpaceOverlay(image)
 	log.Infof("NewParentProcess.CreateMountPointOverlay | %s | %s", upperDir, workDir)
 	cmd.Dir = workDir
+	NewWorkSpace( volume)
 	return cmd, writePipe
 }
 
@@ -88,43 +85,60 @@ func NewPipe() (*os.File, *os.File, error) {
 	return read, write, nil
 }
 
-func DeleteWorkSpace(rootUrl,mntUrl,volume string)  {
-
-}
-
-func NewWorkSpace(rootUrl, volume string)  {
-	upperDir, workDir := images.NewWorkSpaceOverlay(rootUrl)
-	if len(volume) != 0{
+func DeleteWorkSpace(mntUrl, volume string) {
+	if len(volume) != 0 {
 		vu := volumesUrlExtract(volume)
-		if len(vu) != 2{
+		if len(vu) != 2 {
 			log.Errorf("NewWorkSpace.Split.Len | %v", volume)
 			return
 		}
 		left, right := vu[0], vu[1]
-		if len(left) != 0 && len(right) != 0{
-			MountVolume(rootUrl, workDir, left, right)
+		if len(left) != 0 && len(right) != 0 {
+			cvu := path.Join(mntUrl, right)
+			log.Infof("umount %s", cvu)
+			cmd := exec.Command("umount", cvu)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				log.Errorf("DeleteWorkSpace.Command.Run | %v", err)
+			}
+		}
+	}
+
+}
+
+func NewWorkSpace(volume string) {
+	_, workDir := images.GetWriteWorkLayerOverlay()
+	if len(volume) != 0 {
+		vu := volumesUrlExtract(volume)
+		if len(vu) != 2 {
+			log.Errorf("NewWorkSpace.Split.Len | %v", volume)
+			return
+		}
+		left, right := vu[0], vu[1]
+		if len(left) != 0 && len(right) != 0 {
+			MountVolume(workDir, left, right)
 		}
 	}
 }
-func volumesUrlExtract(volume string)[]string  {
-	return  strings.Split(volume,":")
+func volumesUrlExtract(volume string) []string {
+	return strings.Split(volume, ":")
 }
 
-
-func MountVolume(rootUrl,mntUrl,left, right string){
-	if err := os.Mkdir(left, 0777); err != nil{
-		log.Infof("MountVolume.Mkdir.Left | %s | %v", left, err)
+func MountVolume(mntUrl, left, right string) {
+	if err := os.Mkdir(left, 0777); err != nil {
+		log.Errorf("MountVolume.Mkdir.Left | %s | %v", left, err)
 	}
-	cvu := path.Join(mntUrl,right)
-	if err := os.Mkdir(cvu, 0777); err != nil{
-		log.Infof("MountVolume.Mkdir.Right | %s | %v", right, err)
+	cvu := path.Join(mntUrl, right)
+	if err := os.Mkdir(cvu, 0777); err != nil {
+		log.Errorf("MountVolume.Mkdir.Right | %s | %v", right, err)
 	}
 	// 把宿主机文件目录挂载到容器挂载点
-
-	cmd := exec.Command("mount", left, cvu)
+	log.Infof("mount %s %s", cvu, left)
+	cmd := exec.Command("mount", "--bind", left, cvu)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err  := cmd.Run();err != nil{
+	if err := cmd.Run(); err != nil {
 		log.Errorf("MountVolume.Command.Run | %v", err)
 	}
 }

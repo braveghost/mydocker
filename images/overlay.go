@@ -3,20 +3,24 @@ package images
 import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"mydocker/setting"
 	"os"
 	"os/exec"
+	"path"
 )
 
-func NewWorkSpaceOverlay(rootUrl string) (string, string) {
-	//CreateReadOnlyLayerOverlay(rootUrl)
-	upper, work := CreateWriteWorkLayerOverlay(rootUrl)
-	CreateMountPointOverlay(rootUrl, upper, work)
+func NewWorkSpaceOverlay(image string) (string, string) {
+	rootUrl := CreateReadOnlyLayerOverlay(image)
+	upper, work, ok := CreateWriteWorkLayerOverlay()
+	if ok {
+		CreateMountPointOverlay(rootUrl, upper, work)
+	}
 	return upper, work
 }
 
-func CreateReadOnlyLayerOverlay(rootUrl string) {
-	busyboxUrl := rootUrl + "busybox/"
-	busybosTarUrl := rootUrl + "busybox.tar"
+func CreateReadOnlyLayerOverlay(image string) string {
+	busyboxUrl := path.Join(setting.EContainerPath, image)
+	busybosTarUrl := path.Join(setting.EImagesPath, image+".tar")
 	exist := PathExists(busyboxUrl)
 
 	if !exist {
@@ -27,16 +31,20 @@ func CreateReadOnlyLayerOverlay(rootUrl string) {
 			logrus.Errorf("CreateReadOnlyLayerOverlay.Command | %v", err)
 		}
 	}
+
+	return busyboxUrl
 }
-func GetWriteWorkLayerOverlay(rootUrl string) (string, string) {
+func GetWriteWorkLayerOverlay() (string, string) {
 
-	return rootUrl + "_upperdir", rootUrl + "_workdir"
+	return setting.EContainerPath + "_upperdir", setting.EContainerPath + "_workdir"
 }
 
-func CreateWriteWorkLayerOverlay(rootUrl string) (string, string) {
-	upperDir, workDir := GetWriteWorkLayerOverlay(rootUrl)
-
+func CreateWriteWorkLayerOverlay() (string, string, bool) {
+	upperDir, workDir := GetWriteWorkLayerOverlay()
+	var ok = true
 	if exist := PathExists(upperDir); exist {
+		ok = false
+
 		logrus.Errorf("CreateMountPointOverlay.PathExists.UpperDir | %s", upperDir)
 	} else {
 		if err := os.Mkdir(upperDir, 0777); err != nil {
@@ -45,14 +53,15 @@ func CreateWriteWorkLayerOverlay(rootUrl string) (string, string) {
 	}
 
 	if exist := PathExists(workDir); exist {
-		logrus.Errorf("CreateMountPointOverlay.PathExists.WorkDir | %v | %s", workDir)
+		ok = false
+		logrus.Errorf("CreateMountPointOverlay.PathExists.WorkDir | %s", workDir)
 	} else {
 		if err := os.Mkdir(workDir, 0777); err != nil {
 			logrus.Errorf("CreateMountPointOverlay.Mkdir.WorkDir | %v | %s", err, workDir)
 		}
 
 	}
-	return upperDir, workDir
+	return upperDir, workDir, ok
 }
 func CreateMountPointOverlay(rootUrl, upperUrl, workUrl string) {
 
