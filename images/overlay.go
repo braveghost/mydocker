@@ -2,7 +2,7 @@ package images
 
 import (
 	"fmt"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"mydocker/setting"
 	"os"
 	"os/exec"

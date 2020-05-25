@@ -1,7 +1,7 @@
 package command
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 	"mydocker/container"
@@ -120,6 +120,29 @@ var (
 			log.Infof("ps come on | %v", ctx.Args())
 			return container.ListContainer()
 		},
+	}	// ps命令
+	execCommand = cli.Command{
+		Name:            "exec",
+		Usage:           "Init container process run user's rocess in container.Do not call it outside",
+		SkipFlagParsing: false,
+		Action: func(ctx *cli.Context) error {
+			// 容器删除
+			log.Infof("exec come on | %v", ctx.Args())
+
+			// 如果环境变量不为空就返回
+			if os.Getenv(container.ENV_EXEC_PID) != ""{
+				log.Errorf("pid callback pid | %d", os.Getgid())
+				return nil
+			}
+			args := ctx.Args()
+			if len(args) < 2{
+				log.Errorf("Exec.Len.Args!=2")
+				return errors.Errorf("Missing container name or command")
+			}
+			name := args[0]
+
+			return container.ExecContainer(name ,args.Tail())
+		},
 	}
 	// 查看日志
 	logsCommand = cli.Command{
@@ -133,14 +156,13 @@ var (
 				Name:  "name",
 				Usage: "container name",
 			},
-
 		},
 
 		Action: func(ctx *cli.Context) error {
 			name := ctx.String("name")
-  if len(name) == 0{
-  	return errors.New("LogsContainer.Action.Name.Null")
-  }
+			if len(name) == 0 {
+				return errors.New("LogsContainer.Action.Name.Null")
+			}
 			// 容器删除
 			log.Infof("logs come on | %v", ctx.Args())
 			return container.LogsContainer(name)
@@ -218,6 +240,7 @@ var Commands = []cli.Command{
 	rmCommand,     // 删除容器
 	listCommand,   // 列表
 	logsCommand,   // 查看日志
+	execCommand,   // 执行命令
 }
 
 func sendInitCommand(comArray []string, writePipe *os.File) {

@@ -2,9 +2,9 @@ package cgroup
 
 import (
 	"github.com/pkg/errors"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"mydocker/subsystems"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 )
 

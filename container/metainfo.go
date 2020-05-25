@@ -4,9 +4,11 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 	"github.com/zheng-ji/goSnowFlake"
+	"io/ioutil"
 	"mydocker/setting"
 	"os"
 	"path"
@@ -88,6 +90,24 @@ func DeleteContainerMeta(name string)  {
 		logrus.Errorf("DeleteContainerMeta.RemoveAll | %s | %v", p, err)
 	}
 }
+
+func GetContainerMeta(name string) (*ContainerMeta, error)  {
+	p := path.Join(setting.EContainerMetaDataPath, name, ConfigName)
+	c, err := ioutil.ReadFile(p)
+	if err != nil{
+		logrus.Errorf("GetContainerMeta.ReadFile | %v", err)
+		return nil, errors.WithMessage(err, "GetContainerMeta.ReadFile ")
+	}
+	 meta :=  &ContainerMeta{}
+	if err := json.Unmarshal(c, meta);err != nil{
+		logrus.Errorf("GetContainerMeta.Unmarshal | %v", err)
+
+		return nil, errors.WithMessage(err, "GetContainerMeta.Unmarshal")
+	}
+	return meta, nil
+}
+
+
 
 const(
 	RUNNING  = "running"

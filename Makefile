@@ -22,13 +22,13 @@ help:
 
 
 linux:
-	@GOOS=linux GOARCH=${GOARCH} go build ${LDFLAGS} -o ${BINARY}-linux-${GOARCH} main.go
+	@GOOS=linux CGO_ENABLED=1 GOARCH=${GOARCH} go build ${LDFLAGS} -o /root/${BINARY}-linux-${GOARCH} main.go
 
 darwin:
-	@GOOS=darwin GOARCH=${GOARCH} go build ${LDFLAGS} -o ${BINARY}-darwin-${GOARCH} main.go
+	@GOOS=darwin CGO_ENABLED=1 GOARCH=${GOARCH} go build ${LDFLAGS} -o ${BINARY}-darwin-${GOARCH} main.go
 
 windows:
-	@GOOS=windows GOARCH=${GOARCH} go build ${LDFLAGS} -o ${BINARY}-windows-${GOARCH}.exe main.go
+	@GOOS=windows CGO_ENABLED=1 GOARCH=${GOARCH} go build ${LDFLAGS} -o ${BINARY}-windows-${GOARCH}.exe main.go
 clean:
 	@rm -f ${BINARY}-*-{GOARCH}
 

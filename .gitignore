@@ -8,3 +8,4 @@ logs/
 main
 */main
 *-amd64
+go1.13.11.linux-amd64.tar.gz
