@@ -1,17 +1,20 @@
 package command
 
 import (
-	log "github.com/sirupsen/logrus"
+	"os"
+	"strings"
+
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
 	"mydocker/container"
 	"mydocker/images"
 	"mydocker/subsystems"
-	"os"
-	"strings"
 )
 
 var (
+	// 运行
 	runCommand = cli.Command{
 		Name: "run",
 		Usage: `Create a container with namespace and cgroups limit
@@ -87,6 +90,7 @@ var (
 		},
 	}
 
+	// 初始化容器
 	initCommand = cli.Command{
 		Name:            "init",
 		Usage:           "Init container process run user's rocess in container.Do not call it outside",
@@ -99,6 +103,7 @@ var (
 		},
 	}
 
+	// 删除
 	rmCommand = cli.Command{
 		Name:            "rm",
 		Usage:           "Init container process run user's rocess in container.Do not call it outside",
@@ -106,7 +111,13 @@ var (
 		Action: func(ctx *cli.Context) error {
 			// 容器删除
 			log.Infof("rm come on | %v", ctx.Args())
-			return container.RemoveContainer()
+
+			args := ctx.Args()
+			if len(args) != 1 {
+				log.Errorf("Remove.Len.Args!=1")
+				return errors.Errorf("Missing container name")
+			}
+			return container.RemoveContainer(args[0])
 		},
 	}
 
@@ -116,32 +127,32 @@ var (
 		Usage:           "Init container process run user's rocess in container.Do not call it outside",
 		SkipFlagParsing: false,
 		Action: func(ctx *cli.Context) error {
-			// 容器删除
 			log.Infof("ps come on | %v", ctx.Args())
 			return container.ListContainer()
 		},
-	}	// ps命令
+	}
+
+	// 侵入容器执行命令
 	execCommand = cli.Command{
 		Name:            "exec",
 		Usage:           "Init container process run user's rocess in container.Do not call it outside",
 		SkipFlagParsing: false,
 		Action: func(ctx *cli.Context) error {
-			// 容器删除
 			log.Infof("exec come on | %v", ctx.Args())
 
 			// 如果环境变量不为空就返回
-			if os.Getenv(container.ENV_EXEC_PID) != ""{
+			if os.Getenv(container.ENV_EXEC_PID) != "" {
 				log.Errorf("pid callback pid | %d", os.Getgid())
 				return nil
 			}
 			args := ctx.Args()
-			if len(args) < 2{
+			if len(args) < 2 {
 				log.Errorf("Exec.Len.Args!=2")
 				return errors.Errorf("Missing container name or command")
 			}
 			name := args[0]
 
-			return container.ExecContainer(name ,args.Tail())
+			return container.ExecContainer(name, args.Tail())
 		},
 	}
 	// 查看日志
@@ -188,6 +199,26 @@ var (
 			return nil
 		},
 	}
+
+	// 停止容器
+	stopCommand = cli.Command{
+		Name:            "stop",
+		Usage:           "停止容器",
+		SkipFlagParsing: false,
+
+
+		Action: func(ctx *cli.Context) error {
+			// 容器删除
+			log.Infof("stop come on | %v", ctx.Args())
+			args := ctx.Args()
+			if len(args) != 1 {
+				log.Errorf("Stop.Len.Args!=1")
+				return errors.Errorf("Missing container name")
+			}
+
+			return container.StopContainer(args[0])
+		},
+	}
 )
 
 func Run(tty bool, cmdArray []string, image, volume, name string, res *subsystems.ResourceConfig) {
@@ -227,7 +258,7 @@ func Run(tty bool, cmdArray []string, image, volume, name string, res *subsystem
 		// ti参数前台等待
 		// 前台等待台运行
 		log.Infof("Run.Wait | %v", parent.Wait())
-		_, workUrl := images.GetWriteWorkLayerOverlay()
+		_, workUrl := images.GetWriteWorkLayerOverlay(name)
 		container.DeleteWorkSpace(workUrl, volume)
 		container.DeleteContainerMeta(cname)
 	}
@@ -241,6 +272,7 @@ var Commands = []cli.Command{
 	listCommand,   // 列表
 	logsCommand,   // 查看日志
 	execCommand,   // 执行命令
+	stopCommand,   // 停止容器
 }
 
 func sendInitCommand(comArray []string, writePipe *os.File) {

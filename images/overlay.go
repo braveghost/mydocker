@@ -9,9 +9,9 @@ import (
 	"path"
 )
 
-func NewWorkSpaceOverlay(image string) (string, string) {
+func NewWorkSpaceOverlay(image string, name string) (string, string) {
 	rootUrl := CreateReadOnlyLayerOverlay(image)
-	upper, work, ok := CreateWriteWorkLayerOverlay()
+	upper, work, ok := CreateWriteWorkLayerOverlay(name)
 	if ok {
 		CreateMountPointOverlay(rootUrl, upper, work)
 	}
@@ -34,13 +34,13 @@ func CreateReadOnlyLayerOverlay(image string) string {
 
 	return busyboxUrl
 }
-func GetWriteWorkLayerOverlay() (string, string) {
+func GetWriteWorkLayerOverlay(name string) (string, string) {
 
-	return setting.EContainerPath + "_upperdir", setting.EContainerPath + "_workdir"
+	return path.Join(setting.EContainerPath+"_upperdir", name), path.Join(setting.EContainerPath+"_workdir", name)
 }
 
-func CreateWriteWorkLayerOverlay() (string, string, bool) {
-	upperDir, workDir := GetWriteWorkLayerOverlay()
+func CreateWriteWorkLayerOverlay(name string) (string, string, bool) {
+	upperDir, workDir := GetWriteWorkLayerOverlay(name)
 	var ok = true
 	if exist := PathExists(upperDir); exist {
 		ok = false

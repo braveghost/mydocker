@@ -1,8 +1,8 @@
 package container
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"mydocker/images"
 	"mydocker/setting"
@@ -51,7 +51,7 @@ func RunContainerInitProcess() error {
 	return nil
 }
 
-func NewParentProcess(tty bool, volume,image,name string) (*exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, volume, image, name string) (*exec.Cmd, *os.File) {
 	readPipe, writePipe, err := NewPipe()
 	if err != nil {
 		log.Errorf("New pipe error %v", err)
@@ -67,17 +67,17 @@ func NewParentProcess(tty bool, volume,image,name string) (*exec.Cmd, *os.File) 
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-	}else {
-	//	后台运行时候日志存储到文件
-		logDir:= path.Join(setting.EContainerLogsDataPath, name)
-		if err := os.MkdirAll(logDir, 0622); err != nil{
+	} else {
+		//	后台运行时候日志存储到文件
+		logDir := GetLogPath(name)
+		if err := os.MkdirAll(logDir, 0622); err != nil {
 			log.Errorf("NewParentProcess.MkdirAll.Log | %v | %s", err, logDir)
 			return nil, nil
 		}
 		logFile := path.Join(logDir, setting.EContainerLogName)
-		slf ,err := os.Create(logFile)
-		if err != nil{
-			if err := os.MkdirAll(logDir, 0622); err != nil{
+		slf, err := os.Create(logFile)
+		if err != nil {
+			if err := os.MkdirAll(logDir, 0622); err != nil {
 				log.Errorf("NewParentProcess.Create.Log | %v | %s", err, logFile)
 				return nil, nil
 			}
@@ -87,11 +87,16 @@ func NewParentProcess(tty bool, volume,image,name string) (*exec.Cmd, *os.File) 
 	cmd.ExtraFiles = []*os.File{readPipe}
 	// images.NewWorkSpaceAufs
 	// aufs是老版本了，所以就没试过了，这里只用了overlay2
-	upperDir, workDir := images.NewWorkSpaceOverlay(image)
+	upperDir, workDir := images.NewWorkSpaceOverlay(image, name)
 	log.Infof("NewParentProcess.CreateMountPointOverlay | %s | %s", upperDir, workDir)
 	cmd.Dir = workDir
-	NewWorkSpace( volume)
+	NewWorkSpace(volume, name)
 	return cmd, writePipe
+}
+
+func GetLogPath(name string) string {
+	return path.Join(setting.EContainerLogsDataPath, name)
+
 }
 
 func NewPipe() (*os.File, *os.File, error) {
@@ -124,8 +129,8 @@ func DeleteWorkSpace(mntUrl, volume string) {
 
 }
 
-func NewWorkSpace(volume string) {
-	_, workDir := images.GetWriteWorkLayerOverlay()
+func NewWorkSpace(volume, name string) {
+	_, workDir := images.GetWriteWorkLayerOverlay(name)
 	if len(volume) != 0 {
 		vu := volumesUrlExtract(volume)
 		if len(vu) != 2 {

@@ -47,7 +47,6 @@ func RecordContainerMeta(pid int, cname string, commandArray []string) (string, 
 	if len(cname) == 0{
 		cname  = id
 	}
-
 	ctime := time.Now().Format("2006-01-02 15:04:05")
 
 	cmeta := &ContainerMeta{
@@ -84,11 +83,25 @@ func RecordContainerMeta(pid int, cname string, commandArray []string) (string, 
 	return cname, nil
 }
 
+func GetMetaPath(name string) string {
+	return path.Join(setting.EContainerMetaDataPath, name)
+}
+
+// 更新元数据
+func WriteContainerMeta(fn string, data []byte,) error {
+	if err := ioutil.WriteFile(fn, data, 0622);err != nil{
+		logrus.Errorf("WriteContainerMeta.WriteFile | %v", err)
+		return errors.WithMessage(err,"WriteContainerMeta.WriteFile")
+	}
+	return nil
+}
+
 func DeleteContainerMeta(name string)  {
 	p := path.Join(setting.EContainerMetaDataPath, name)
 	if err := os.RemoveAll(p);err != nil{
 		logrus.Errorf("DeleteContainerMeta.RemoveAll | %s | %v", p, err)
 	}
+
 }
 
 func GetContainerMeta(name string) (*ContainerMeta, error)  {

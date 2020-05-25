@@ -59,5 +59,3 @@ __attribute__((constructor)) void enter_namespace(void) {
 }
 */
 import "C"
-
-var X = 1

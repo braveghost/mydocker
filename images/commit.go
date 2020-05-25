@@ -8,7 +8,7 @@ import (
 )
 
 func CommitImage(name string)  {
-	_,work := GetWriteWorkLayerOverlay()
+	_,work := GetWriteWorkLayerOverlay(name)
 	imageUrl := path.Join(setting.EImagesPath, name + ".tar")
 	logrus.Infof("CommitImage.Path | %s", imageUrl)
   	if _, err := exec.Command("tar", "-czf", imageUrl, "-C", work,".").CombinedOutput();err != nil{
