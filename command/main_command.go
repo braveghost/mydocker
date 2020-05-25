@@ -126,7 +126,7 @@ var (
 		Usage:           "Init container process run user's rocess in container.Do not call it outside",
 		SkipFlagParsing: false,
 		Flags: []cli.Flag{
-			cli.BoolFlag{
+			cli.StringFlag{
 				Name:  "name",
 				Usage: "image name",
 			},
