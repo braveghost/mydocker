@@ -42,10 +42,12 @@ type ContainerMeta struct {
 
 func RecordContainerMeta(pid int, cname string, commandArray []string) (string, error) {
 	id := GetSnowId()
-	ctime := time.Now().Format("2006-01-02 15:04:05")
 	if len(cname) == 0{
 		cname  = id
 	}
+
+	ctime := time.Now().Format("2006-01-02 15:04:05")
+
 	cmeta := &ContainerMeta{
 		Pid:         cast.ToString(pid),
 		Id:          id,

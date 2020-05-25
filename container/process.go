@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"mydocker/images"
+	"mydocker/setting"
 	"mydocker/subsystems"
 	"os"
 	"os/exec"
@@ -50,7 +51,7 @@ func RunContainerInitProcess() error {
 	return nil
 }
 
-func NewParentProcess(tty bool, volume,image string) (*exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, volume,image,name string) (*exec.Cmd, *os.File) {
 	readPipe, writePipe, err := NewPipe()
 	if err != nil {
 		log.Errorf("New pipe error %v", err)
@@ -66,6 +67,22 @@ func NewParentProcess(tty bool, volume,image string) (*exec.Cmd, *os.File) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
+	}else {
+	//	后台运行时候日志存储到文件
+		logDir:= path.Join(setting.EContainerLogsDataPath, name)
+		if err := os.MkdirAll(logDir, 0622); err != nil{
+			log.Errorf("NewParentProcess.MkdirAll.Log | %v | %s", err, logDir)
+			return nil, nil
+		}
+		logFile := path.Join(logDir, setting.EContainerLogName)
+		slf ,err := os.Create(logFile)
+		if err != nil{
+			if err := os.MkdirAll(logDir, 0622); err != nil{
+				log.Errorf("NewParentProcess.Create.Log | %v | %s", err, logFile)
+				return nil, nil
+			}
+		}
+		cmd.Stdout = slf
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}
 	// images.NewWorkSpaceAufs

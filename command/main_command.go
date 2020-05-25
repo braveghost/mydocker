@@ -121,6 +121,32 @@ var (
 			return container.ListContainer()
 		},
 	}
+	// 查看日志
+	logsCommand = cli.Command{
+		Name:            "logs",
+		Usage:           "Init container process run user's rocess in container.Do not call it outside",
+		SkipFlagParsing: false,
+		Flags: []cli.Flag{
+
+			// 容器名称
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "container name",
+			},
+
+		},
+
+		Action: func(ctx *cli.Context) error {
+			name := ctx.String("name")
+  if len(name) == 0{
+  	return errors.New("LogsContainer.Action.Name.Null")
+  }
+			// 容器删除
+			log.Infof("logs come on | %v", ctx.Args())
+			return container.LogsContainer(name)
+		},
+	}
+	// 构建镜像
 	commitCommand = cli.Command{
 		Name:            "commit",
 		Usage:           "Init container process run user's rocess in container.Do not call it outside",
@@ -144,7 +170,7 @@ var (
 
 func Run(tty bool, cmdArray []string, image, volume, name string, res *subsystems.ResourceConfig) {
 	log.Infof("Run.Params | %v | %v | %v | %s", tty, cmdArray, res, image)
-	parent, writePipe := container.NewParentProcess(tty, volume, image)
+	parent, writePipe := container.NewParentProcess(tty, volume, image, name)
 	if parent == nil {
 		log.Errorf("New parent process error")
 		return
@@ -191,6 +217,7 @@ var Commands = []cli.Command{
 	commitCommand, // 镜像打包
 	rmCommand,     // 删除容器
 	listCommand,   // 列表
+	logsCommand,   // 查看日志
 }
 
 func sendInitCommand(comArray []string, writePipe *os.File) {
