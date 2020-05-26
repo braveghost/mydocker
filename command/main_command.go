@@ -59,9 +59,20 @@ var (
 				Name:  "cpuset",
 				Usage: "cpuset limit",
 			},
+			cli.StringSliceFlag{
+				Name:  "e",
+				Usage: "set environment",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			// 启动容器
+
+			ttl := ctx.Bool("ti")
+			detach := ctx.Bool("d")
+			if ttl && detach {
+				return errors.New("ttl && detach")
+			}
+
 			if len(ctx.Args()) < 1 {
 				return errors.New("Missing container command")
 			}
@@ -70,21 +81,19 @@ var (
 				arr = append(arr, v)
 			}
 
-			ttl := ctx.Bool("ti")
-			detach := ctx.Bool("d")
-			if ttl && detach {
-				return errors.New("ttl && detach")
-			}
-			name := ctx.String("name")
 			Run(
-				ttl,
-				arr, ctx.String("image"),
-				ctx.String("v"),
-				name,
-				&subsystems.ResourceConfig{
-					MemoryLimit: ctx.String("m"),
-					CpuSet:      ctx.String("cpuset"),
-					CpuShare:    ctx.String("cpushare"),
+				&RunArgs{
+					Tty:      ttl,
+					CmdArray: arr,
+					Image:    ctx.String("image"),
+					Volume:   ctx.String("v"),
+					Name:     ctx.String("name"),
+					Env:      ctx.StringSlice("e"),
+					ResourceConfig: &subsystems.ResourceConfig{
+						MemoryLimit: ctx.String("m"),
+						CpuSet:      ctx.String("cpuset"),
+						CpuShare:    ctx.String("cpushare"),
+					},
 				})
 			return nil
 		},
@@ -221,16 +230,26 @@ var (
 	}
 )
 
-func Run(tty bool, cmdArray []string, image, volume, name string, res *subsystems.ResourceConfig) {
-	log.Infof("Run.Params | %v | %v | %v | %s", tty, cmdArray, res, image)
-	meta, _ := container.GetContainerMeta(name)
+type RunArgs struct {
+	Tty            bool
+	CmdArray       []string
+	Image          string
+	Volume         string
+	Name           string
+	Env            []string
+	ResourceConfig *subsystems.ResourceConfig
+}
+
+func Run(args *RunArgs) {
+	log.Infof("Run.Params | %v | %v | %v | %s", args.Tty, args.CmdArray, args.ResourceConfig, args.Image)
+	meta, _ := container.GetContainerMeta(args.Name)
 
 	if meta != nil {
-		log.Warnf("Run.ContainerExist | %v | %v | %v | %s | %v", tty, cmdArray, res, image, meta)
+		log.Warnf("Run.ContainerExist | %v | %v | %v | %s | %v", args.Tty, args.CmdArray, args.ResourceConfig, args.Image, meta)
 		return
 	}
 
-	parent, writePipe := container.NewParentProcess(tty, volume, image, name)
+	parent, writePipe := container.NewParentProcess(args.Tty, args.Volume, args.Image, args.Name, args.Env)
 	if parent == nil {
 		log.Errorf("New parent process error")
 		return
@@ -254,19 +273,19 @@ func Run(tty bool, cmdArray []string, image, volume, name string, res *subsystem
 	//	log.Errorf("Run.Apply | %v", err)
 	//
 	//}
-
-	if _, err := container.RecordContainerMeta(parent.Process.Pid, name, image, volume, cmdArray); err != nil {
+	if _, err := container.RecordContainerMeta(parent.Process.Pid, args.Name, args.Image, args.Volume, args.CmdArray); err != nil {
 		log.Errorf("Run.RecordContainerMeta | %v", err)
 		return
 	}
 
-	sendInitCommand(cmdArray, writePipe)
-	if tty {
+	sendInitCommand(args.CmdArray, writePipe)
+	if args.Tty {
 		// ti参数前台等待
 		// 前台等待台运行
 		log.Infof("Run.Wait | %v", parent.Wait())
-		_, workUrl := images.GetWriteWorkLayerOverlay(name)
-		container.DeleteWorkSpace(workUrl, volume)
+		_, workUrl := images.GetWriteWorkLayerOverlay(args.Name)
+		container.DeleteWorkSpace(workUrl, args.Volume)
+		_ = container.UpdateContainerStatus(args.Name, container.STOP)
 		//container.DeleteContainerMeta(cname)
 	}
 }

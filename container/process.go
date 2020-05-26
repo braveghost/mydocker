@@ -51,7 +51,7 @@ func RunContainerInitProcess() error {
 	return nil
 }
 
-func NewParentProcess(tty bool, volume, image, name string) (*exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, volume, image, name string, envList []string) (*exec.Cmd, *os.File) {
 
 
 
@@ -65,6 +65,7 @@ func NewParentProcess(tty bool, volume, image, name string) (*exec.Cmd, *os.File
 		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS |
 			syscall.CLONE_NEWNET | syscall.CLONE_NEWIPC,
 	}
+	cmd.Env = append(os.Environ(), envList...)
 	if tty {
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout

@@ -92,8 +92,12 @@ func GetMetaPath(name string) string {
 }
 
 // 更新元数据
-func WriteContainerMeta(fn string, data []byte, ) error {
-	if err := ioutil.WriteFile(fn, data, 0622); err != nil {
+func WriteContainerMeta(meta *ContainerMeta) error {
+
+	data, _ := json.Marshal(meta)
+	p := path.Join(setting.EContainerMetaDataPath, meta.Name, ConfigName)
+
+	if err := ioutil.WriteFile(p, data, 0622); err != nil {
 		logrus.Errorf("WriteContainerMeta.WriteFile | %v", err)
 		return errors.WithMessage(err, "WriteContainerMeta.WriteFile")
 	}
@@ -101,9 +105,9 @@ func WriteContainerMeta(fn string, data []byte, ) error {
 }
 
 func DeleteContainerMeta(name string) {
-	p := path.Join(setting.EContainerMetaDataPath, name)
-	if err := os.RemoveAll(p); err != nil {
-		logrus.Errorf("DeleteContainerMeta.RemoveAll | %s | %v", p, err)
+	metaPath := GetMetaPath(name)
+	if err := os.RemoveAll(metaPath); err != nil {
+		logrus.Errorf("DeleteContainerMeta.RemoveAll | %s | %v", metaPath, err)
 	}
 
 }
@@ -122,6 +126,16 @@ func GetContainerMeta(name string) (*ContainerMeta, error) {
 		return nil, errors.WithMessage(err, "GetContainerMeta.Unmarshal")
 	}
 	return meta, nil
+}
+
+func UpdateContainerStatus(name, status string) error {
+	meta, err := GetContainerMeta(name)
+	if err != nil {
+		logrus.Errorf("UpdateContainerStatus.GetContainerMeta | %v", err)
+		return errors.WithMessage(err, "UpdateContainerStatus.GetContainerMeta")
+	}
+	meta.Status = STOP
+	return WriteContainerMeta(meta)
 }
 
 const (

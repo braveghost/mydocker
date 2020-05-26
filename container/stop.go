@@ -1,13 +1,9 @@
 package container
 
 import (
-	"encoding/json"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"mydocker/setting"
 	"os"
 	"os/exec"
-	"path"
 )
 
 func StopContainer(name string) error {
@@ -24,12 +20,8 @@ func StopContainer(name string) error {
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		logrus.Errorf("StopContainer.Run | %v", err)
-		return errors.WithMessage(err, "StopContainer.Run")
 	}
 	meta.Status = STOP
 
-	data, _ := json.Marshal(meta)
-	p := path.Join(setting.EContainerMetaDataPath, name, ConfigName)
-
-	return WriteContainerMeta(p, data)
+	return WriteContainerMeta(meta)
 }
