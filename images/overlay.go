@@ -63,6 +63,7 @@ func CreateWriteWorkLayerOverlay(name string) (string, string, bool) {
 	}
 	return upperDir, workDir, ok
 }
+
 func CreateMountPointOverlay(rootUrl, upperUrl, workUrl string) {
 
 	dirs := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", rootUrl, upperUrl, workUrl)

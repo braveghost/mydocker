@@ -223,6 +223,13 @@ var (
 
 func Run(tty bool, cmdArray []string, image, volume, name string, res *subsystems.ResourceConfig) {
 	log.Infof("Run.Params | %v | %v | %v | %s", tty, cmdArray, res, image)
+	meta, _ := container.GetContainerMeta(name)
+
+	if meta != nil {
+		log.Warnf("Run.ContainerExist | %v | %v | %v | %s | %v", tty, cmdArray, res, image, meta)
+		return
+	}
+
 	parent, writePipe := container.NewParentProcess(tty, volume, image, name)
 	if parent == nil {
 		log.Errorf("New parent process error")
@@ -247,8 +254,8 @@ func Run(tty bool, cmdArray []string, image, volume, name string, res *subsystem
 	//	log.Errorf("Run.Apply | %v", err)
 	//
 	//}
-	cname, err := container.RecordContainerMeta(parent.Process.Pid, name, cmdArray)
-	if err != nil {
+
+	if _, err := container.RecordContainerMeta(parent.Process.Pid, name, image, volume, cmdArray); err != nil {
 		log.Errorf("Run.RecordContainerMeta | %v", err)
 		return
 	}
@@ -260,7 +267,7 @@ func Run(tty bool, cmdArray []string, image, volume, name string, res *subsystem
 		log.Infof("Run.Wait | %v", parent.Wait())
 		_, workUrl := images.GetWriteWorkLayerOverlay(name)
 		container.DeleteWorkSpace(workUrl, volume)
-		container.DeleteContainerMeta(cname)
+		//container.DeleteContainerMeta(cname)
 	}
 }
 

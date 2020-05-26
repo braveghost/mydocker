@@ -52,6 +52,9 @@ func RunContainerInitProcess() error {
 }
 
 func NewParentProcess(tty bool, volume, image, name string) (*exec.Cmd, *os.File) {
+
+
+
 	readPipe, writePipe, err := NewPipe()
 	if err != nil {
 		log.Errorf("New pipe error %v", err)
