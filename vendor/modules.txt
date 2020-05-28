@@ -14,7 +14,12 @@ github.com/sirupsen/logrus
 github.com/spf13/cast
 # github.com/urfave/cli v1.22.4
 github.com/urfave/cli
+# github.com/vishvananda/netlink v1.1.0
+github.com/vishvananda/netlink
+github.com/vishvananda/netlink/nl
+# github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe
+github.com/vishvananda/netns
 # github.com/zheng-ji/goSnowFlake v0.0.0-20180906112711-fc763800eec9
 github.com/zheng-ji/goSnowFlake
-# golang.org/x/sys v0.0.0-20190422165155-953cdadca894
+# golang.org/x/sys v0.0.0-20200217220822-9197077df867
 golang.org/x/sys/unix

@@ -20,9 +20,9 @@ func main() {
 		log.SetOutput(os.Stdout)
 		return nil
 	}
+
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-
 
 }

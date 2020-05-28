@@ -1,6 +1,7 @@
 package command
 
 import (
+	"mydocker/cni"
 	"os"
 	"strings"
 
@@ -115,7 +116,7 @@ var (
 	// 删除
 	rmCommand = cli.Command{
 		Name:            "rm",
-		Usage:           "Init container process run user's rocess in container.Do not call it outside",
+		Usage:           "rm container",
 		SkipFlagParsing: false,
 		Action: func(ctx *cli.Context) error {
 			// 容器删除
@@ -133,7 +134,7 @@ var (
 	// ps命令
 	listCommand = cli.Command{
 		Name:            "ps",
-		Usage:           "Init container process run user's rocess in container.Do not call it outside",
+		Usage:           "list container",
 		SkipFlagParsing: false,
 		Action: func(ctx *cli.Context) error {
 			log.Infof("ps come on | %v", ctx.Args())
@@ -144,7 +145,7 @@ var (
 	// 侵入容器执行命令
 	execCommand = cli.Command{
 		Name:            "exec",
-		Usage:           "Init container process run user's rocess in container.Do not call it outside",
+		Usage:           "exec",
 		SkipFlagParsing: false,
 		Action: func(ctx *cli.Context) error {
 			log.Infof("exec come on | %v", ctx.Args())
@@ -167,7 +168,7 @@ var (
 	// 查看日志
 	logsCommand = cli.Command{
 		Name:            "logs",
-		Usage:           "Init container process run user's rocess in container.Do not call it outside",
+		Usage:           "show container log",
 		SkipFlagParsing: false,
 		Flags: []cli.Flag{
 
@@ -191,7 +192,7 @@ var (
 	// 构建镜像
 	commitCommand = cli.Command{
 		Name:            "commit",
-		Usage:           "Init container process run user's rocess in container.Do not call it outside",
+		Usage:           "build images",
 		SkipFlagParsing: false,
 		Flags: []cli.Flag{
 			cli.StringFlag{
@@ -212,7 +213,7 @@ var (
 	// 停止容器
 	stopCommand = cli.Command{
 		Name:            "stop",
-		Usage:           "停止容器",
+		Usage:           "stop container",
 		SkipFlagParsing: false,
 
 
@@ -226,6 +227,70 @@ var (
 			}
 
 			return container.StopContainer(args[0])
+		},
+	}
+	// 创建网络
+	networkCommand = cli.Command{
+		Name:         "network",
+		Usage:        "network",
+
+		Subcommands:            []cli.Command{
+			{
+				Name: "create",
+				Usage: "create a container network",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "driver",
+						Usage: "network driver",
+					},
+					cli.StringFlag{
+						Name:  "subnet",
+						Usage: "subnet cidr",
+					},
+				},
+				Action:func(context *cli.Context) error {
+					if len(context.Args()) < 1 {
+						return errors.Errorf("Missing network name")
+					}
+					if err := cni.InitNetworkList();err != nil{
+						return err
+					}
+					err := cni.CreateNetwork(context.String("driver"), context.String("subnet"), context.Args()[0])
+					if err != nil {
+						return errors.WithMessage(err, "create network error")
+					}
+					return nil
+				},
+			},
+			{
+				Name: "list",
+				Usage: "list container network",
+				Action:func(context *cli.Context) error {
+					if err := cni.InitNetworkList();err != nil{
+						return err
+					}
+					cni.ListNetwork()
+					return nil
+				},
+			},
+			{
+				Name: "remove",
+				Usage: "remove container network",
+				Action:func(context *cli.Context) error {
+					if len(context.Args()) < 1 {
+						return errors.Errorf("Missing network name")
+
+					}
+					if err := cni.InitNetworkList();err != nil{
+						return err
+					}
+					err := cni.DeleteNetwork(context.Args()[0])
+					if err != nil {
+						return errors.WithMessage(err, "remove network error")
+					}
+					return nil
+				},
+			},
 		},
 	}
 )
@@ -299,6 +364,7 @@ var Commands = []cli.Command{
 	logsCommand,   // 查看日志
 	execCommand,   // 执行命令
 	stopCommand,   // 停止容器
+	networkCommand,   // 创建网络
 }
 
 func sendInitCommand(comArray []string, writePipe *os.File) {

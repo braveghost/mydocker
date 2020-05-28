@@ -1,37 +1,19 @@
 package container
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
-	"github.com/zheng-ji/goSnowFlake"
 	"io/ioutil"
 	"mydocker/setting"
+	"mydocker/utils"
 	"os"
 	"path"
 	"strings"
 	"time"
 )
 
-var iw *goSnowFlake.IdWorker
-
-func init() {
-	iw, _ = goSnowFlake.NewIdWorker(1)
-}
-func GetSnowId() string {
-	id, _ := iw.NextId()
-	return Md5Str(cast.ToString(id))
-}
-
-func Md5Str(s string) string {
-	hash := md5.New()
-	hash.Write([]byte(s))
-	value := hash.Sum(nil)
-	return hex.EncodeToString(value)
-}
 
 type ContainerMeta struct {
 	Pid         string `json:"pid"`          // 容器宿主进程id
@@ -42,10 +24,11 @@ type ContainerMeta struct {
 	Status      string `json:"status"`       // 容器状态
 	Image       string `json:"image"`        // 镜像
 	Volume      string `json:"volume"`       // 卷
+	PortMapping [] string  // todo 端口号
 }
 
 func RecordContainerMeta(pid int, cname, image, volume string, commandArray []string) (string, error) {
-	id := GetSnowId()
+	id := utils.GetSnowId()
 	if len(cname) == 0 {
 		cname = id
 	}
