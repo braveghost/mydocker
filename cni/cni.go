@@ -60,7 +60,7 @@ func (nw *Network) dump() error {
 
 		return errors.WithMessage(err, "Network.Dump.Write")
 	}
-	logrus.Infof("Network.Dump.Write | %v", content)
+	logrus.Infof("Network.Dump.Write | %v", string(content))
 	return nil
 }
 

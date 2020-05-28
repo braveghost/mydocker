@@ -14,27 +14,27 @@ import (
 	"time"
 )
 
-
 type ContainerMeta struct {
-	Pid         string `json:"pid"`          // 容器宿主进程id
-	Id          string `json:"id"`           // 容器id
-	Name        string `json:"name"`         // 容器名称
-	Command     string `json:"command"`      // 容器内init进程命令
-	CreatedTime string `json:"created_time"` // 创建时间
-	Status      string `json:"status"`       // 容器状态
-	Image       string `json:"image"`        // 镜像
-	Volume      string `json:"volume"`       // 卷
-	PortMapping [] string  // todo 端口号
+	Pid         string   `json:"pid"`          // 容器宿主进程id
+	Id          string   `json:"id"`           // 容器id
+	Name        string   `json:"name"`         // 容器名称
+	Command     string   `json:"command"`      // 容器内init进程命令
+	CreatedTime string   `json:"created_time"` // 创建时间
+	Status      string   `json:"status"`       // 容器状态
+	Image       string   `json:"image"`        // 镜像
+	Volume      string   `json:"volume"`       // 卷
+	PortMapping []string `json:"port_mapping"` // 端口
+	Ip          string   `json:"ip"`           // ip
 }
 
-func RecordContainerMeta(pid int, cname, image, volume string, commandArray []string) (string, error) {
+func NewContainerMeta(pid int, cname, image, volume string, commandArray, portMapping []string) *ContainerMeta {
 	id := utils.GetSnowId()
 	if len(cname) == 0 {
 		cname = id
 	}
 	ctime := time.Now().Format("2006-01-02 15:04:05")
 
-	cmeta := &ContainerMeta{
+	return &ContainerMeta{
 		Pid:         cast.ToString(pid),
 		Id:          id,
 		Name:        cname,
@@ -42,18 +42,23 @@ func RecordContainerMeta(pid int, cname, image, volume string, commandArray []st
 		CreatedTime: ctime,
 		Status:      RUNNING,
 		Image:       image,
+		PortMapping: portMapping,
 		Volume:      volume,
 	}
-	jb, err := json.Marshal(cmeta)
+}
+
+func RecordContainerMeta(meta *ContainerMeta) error {
+
+	jb, err := json.Marshal(meta)
 	if err != nil {
 		logrus.Errorf("RecordContainerMeta.Marshal | %v", err)
-		return "", err
+		return err
 	}
 
-	dirs := path.Join(setting.EContainerMetaDataPath, cname)
+	dirs := path.Join(setting.EContainerMetaDataPath, meta.Name)
 	if err := os.MkdirAll(dirs, 0622); err != nil {
 		logrus.Errorf("RecordContainerMeta.MkdirAll | %v", err)
-		return "", err
+		return err
 	}
 	fname := path.Join(dirs, ConfigName)
 	logrus.Info("RecordContainerMeta.Info | %s", fname)
@@ -61,13 +66,12 @@ func RecordContainerMeta(pid int, cname, image, volume string, commandArray []st
 		defer f.Close()
 		if _, err := f.Write(jb); err != nil {
 			logrus.Errorf("RecordContainerMeta.Write | %v", err)
-			return "", err
+			return err
 		}
 	} else {
 		logrus.Errorf("RecordContainerMeta.Create | %v", err)
 	}
-
-	return cname, nil
+	return nil
 }
 
 func GetMetaPath(name string) string {

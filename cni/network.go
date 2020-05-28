@@ -67,8 +67,17 @@ func ConnectNetwork(name string, meta *container.ContainerMeta) error {
 
 		return errors.WithMessage(ErrNotFoundNetwork, "ConnectNetwork")
 	}
+
+	_, cidr, err := net.ParseCIDR(nw.IpRange.String())
+	if err != nil {
+		logrus.Errorf("ConnectNetwork.ParseCID | %v", err)
+		return errors.WithMessage(err, "DeleteNetwork.ParseCIDR")
+	}
+	logrus.Infof("ConnectNetwork.ParseCID.Info | %v", cidr)
+
+
 	// 获取一个ip地址
-	ip, err := GetIpam().Allocator(nw.IpRange)
+	ip, err := GetIpam().Allocator(cidr)
 	if err != nil {
 		logrus.Errorf("ConnectNetwork.Allocator | %v", err)
 
@@ -82,6 +91,7 @@ func ConnectNetwork(name string, meta *container.ContainerMeta) error {
 		PortMapping: meta.PortMapping,
 		Network:     nw,
 	}
+	logrus.Infof("ConnectNetwork.Info | %v | %v", ip, nw)
 	// 调用网络驱动链接网络
 	if err := defaultNetworkDriverManager.Get(nw.Driver).Connect(nw, ep); err != nil {
 		logrus.Errorf("ConnectNetwork.Connect | %v", err)
@@ -93,6 +103,7 @@ func ConnectNetwork(name string, meta *container.ContainerMeta) error {
 		logrus.Errorf("ConnectNetwork.ConfigEndpointIpAddressAndRouter | %v", err)
 		return errors.WithMessage(err, "ConnectNetwork.ConfigEndpointIpAddressAndRouter")
 	}
+	meta.Ip = ip.To4().String()
 	// 配置端口映射
 	configPortMapping(ep, meta)
 	return nil
@@ -122,8 +133,9 @@ func configEndpointIpAddressAndRouter(ep *Endpoint, meta *container.ContainerMet
 	// 设置容器ip地址并启动
 	interfaceIp := *ep.Network.IpRange
 	interfaceIp.IP = ep.IpAddress
+	logrus.Infof("ConfigEndpointIpAddressAndRouter.Info | %v | %v | %v |%v |%v",interfaceIp, ep.Device.PeerName, ep.IpAddress.String(),interfaceIp.String())
 	if err = setInterfaceIp(ep.Device.PeerName, interfaceIp.String(), true); err != nil {
-		logrus.Errorf("ConfigEndpointIpAddressAndRouter.SetInterfaceIp | %v", err)
+		logrus.Errorf("ConfigEndpointIpAddressAndRouter.SetInterfaceIp | %v | %v", err, interfaceIp.String())
 
 		return errors.WithMessage(err, "ConfigEndpointIpAddressAndRouter.SetInterfaceIp")
 	}

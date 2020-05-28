@@ -64,6 +64,14 @@ var (
 				Name:  "e",
 				Usage: "set environment",
 			},
+			cli.StringSliceFlag{
+				Name:  "p",
+				Usage: "port",
+			},
+			cli.StringFlag{
+				Name:  "net",
+				Usage: "network",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			// 启动容器
@@ -84,12 +92,14 @@ var (
 
 			Run(
 				&RunArgs{
-					Tty:      ttl,
-					CmdArray: arr,
-					Image:    ctx.String("image"),
-					Volume:   ctx.String("v"),
-					Name:     ctx.String("name"),
-					Env:      ctx.StringSlice("e"),
+					Tty:         ttl,
+					CmdArray:    arr,
+					Image:       ctx.String("image"),
+					Volume:      ctx.String("v"),
+					Name:        ctx.String("name"),
+					Env:         ctx.StringSlice("e"),
+					NetworkName: ctx.String("net"),
+					Ports:       ctx.StringSlice("p"),
 					ResourceConfig: &subsystems.ResourceConfig{
 						MemoryLimit: ctx.String("m"),
 						CpuSet:      ctx.String("cpuset"),
@@ -231,12 +241,12 @@ var (
 	}
 	// 创建网络
 	networkCommand = cli.Command{
-		Name:         "network",
-		Usage:        "network",
+		Name:  "network",
+		Usage: "network",
 
-		Subcommands:            []cli.Command{
+		Subcommands: []cli.Command{
 			{
-				Name: "create",
+				Name:  "create",
 				Usage: "create a container network",
 				Flags: []cli.Flag{
 					cli.StringFlag{
@@ -248,11 +258,11 @@ var (
 						Usage: "subnet cidr",
 					},
 				},
-				Action:func(context *cli.Context) error {
+				Action: func(context *cli.Context) error {
 					if len(context.Args()) < 1 {
 						return errors.Errorf("Missing network name")
 					}
-					if err := cni.InitNetworkList();err != nil{
+					if err := cni.InitNetworkList(); err != nil {
 						return err
 					}
 					err := cni.CreateNetwork(context.String("driver"), context.String("subnet"), context.Args()[0])
@@ -263,10 +273,10 @@ var (
 				},
 			},
 			{
-				Name: "list",
+				Name:  "list",
 				Usage: "list container network",
-				Action:func(context *cli.Context) error {
-					if err := cni.InitNetworkList();err != nil{
+				Action: func(context *cli.Context) error {
+					if err := cni.InitNetworkList(); err != nil {
 						return err
 					}
 					cni.ListNetwork()
@@ -274,14 +284,14 @@ var (
 				},
 			},
 			{
-				Name: "remove",
+				Name:  "remove",
 				Usage: "remove container network",
-				Action:func(context *cli.Context) error {
+				Action: func(context *cli.Context) error {
 					if len(context.Args()) < 1 {
 						return errors.Errorf("Missing network name")
 
 					}
-					if err := cni.InitNetworkList();err != nil{
+					if err := cni.InitNetworkList(); err != nil {
 						return err
 					}
 					err := cni.DeleteNetwork(context.Args()[0])
@@ -302,6 +312,8 @@ type RunArgs struct {
 	Volume         string
 	Name           string
 	Env            []string
+	NetworkName    string
+	Ports          []string
 	ResourceConfig *subsystems.ResourceConfig
 }
 
@@ -338,7 +350,18 @@ func Run(args *RunArgs) {
 	//	log.Errorf("Run.Apply | %v", err)
 	//
 	//}
-	if _, err := container.RecordContainerMeta(parent.Process.Pid, args.Name, args.Image, args.Volume, args.CmdArray); err != nil {
+
+	meta = container.NewContainerMeta(parent.Process.Pid, args.Name, args.Image, args.Volume, args.CmdArray, args.Ports)
+	if len(args.NetworkName) != 0 {
+		_ = cni.InitNetworkList()
+		err := cni.ConnectNetwork(args.NetworkName, meta)
+		if err != nil {
+			log.Errorf("Run.ConnectNetwork | %v", err)
+			return
+		}
+	}
+
+	if  err := container.RecordContainerMeta(meta); err != nil {
 		log.Errorf("Run.RecordContainerMeta | %v", err)
 		return
 	}
@@ -356,15 +379,15 @@ func Run(args *RunArgs) {
 }
 
 var Commands = []cli.Command{
-	initCommand,   // 初始化容器
-	runCommand,    // 运行容器
-	commitCommand, // 镜像打包
-	rmCommand,     // 删除容器
-	listCommand,   // 列表
-	logsCommand,   // 查看日志
-	execCommand,   // 执行命令
-	stopCommand,   // 停止容器
-	networkCommand,   // 创建网络
+	initCommand,    // 初始化容器
+	runCommand,     // 运行容器
+	commitCommand,  // 镜像打包
+	rmCommand,      // 删除容器
+	listCommand,    // 列表
+	logsCommand,    // 查看日志
+	execCommand,    // 执行命令
+	stopCommand,    // 停止容器
+	networkCommand, // 创建网络
 }
 
 func sendInitCommand(comArray []string, writePipe *os.File) {
