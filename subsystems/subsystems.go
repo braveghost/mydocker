@@ -17,7 +17,7 @@ type ResourceConfig struct {
 
 type SubSystem interface {
 	Name() string                               // 返回subsystem的名字, 如cpu
-	Set(path string, res *ResourceConfig) error // 设置某个cgroup在这个subsystem中的资源限制
+	Set(path string, res *ResourceConfig) error // 设置某个group在这个subsystem中的资源c限制
 	Apply(path string, pid int) error           // 将进程添加到某个cgroup
 	Remove(path string) error                   // 移除某个cgroup
 }
@@ -32,6 +32,8 @@ func GetCGroupPath(subsystem, cgroupPath string, autoCreate bool) (string, error
 	cgroupRoot := FindCGroupMountPoint(subsystem)
 	p := path.Join(cgroupRoot, cgroupPath)
 	_, err := os.Stat(p)
+	logrus.Infof("GetCGroupPath.Stat | %v | %s", err, p)
+
 	if err == nil || (autoCreate && os.IsNotExist(err)) {
 		if os.IsNotExist(err) {
 			if err := os.Mkdir(p, 0755); err != nil {

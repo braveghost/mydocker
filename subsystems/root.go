@@ -10,6 +10,10 @@ import (
 	"syscall"
 )
 
+
+/*
+挂载root
+*/
 func SetUpMount() {
 	pwd, err := os.Getwd()
 	if err != nil {

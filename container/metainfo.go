@@ -25,8 +25,19 @@ type ContainerMeta struct {
 	Volume      string   `json:"volume"`       // 卷
 	PortMapping []string `json:"port_mapping"` // 端口
 	Ip          string   `json:"ip"`           // ip
+	Network     string   `json:"network"`      // 网络名
 }
 
+/*
+新建元数据对象
+@params pid: pid
+@params cname: 容器名
+@params image: 镜像
+@params volume: 卷信息
+@params commandArray: 命令
+@params portMapping: 端口名称
+@return *ContainerMeta: 元数据对象
+*/
 func NewContainerMeta(pid int, cname, image, volume string, commandArray, portMapping []string) *ContainerMeta {
 	id := utils.GetSnowId()
 	if len(cname) == 0 {
@@ -40,13 +51,18 @@ func NewContainerMeta(pid int, cname, image, volume string, commandArray, portMa
 		Name:        cname,
 		Command:     strings.Join(commandArray, " "),
 		CreatedTime: ctime,
-		Status:      RUNNING,
+		Status:      string(RUNNING),
 		Image:       image,
 		PortMapping: portMapping,
 		Volume:      volume,
 	}
 }
 
+/*
+记录元数据
+@params meta: 元数据
+@return error:
+*/
 func RecordContainerMeta(meta *ContainerMeta) error {
 
 	jb, err := json.Marshal(meta)
@@ -74,11 +90,20 @@ func RecordContainerMeta(meta *ContainerMeta) error {
 	return nil
 }
 
+/*
+获取元数据存储路径
+@params name: 容器名
+@return string: 路径
+*/
 func GetMetaPath(name string) string {
 	return path.Join(setting.EContainerMetaDataPath, name)
 }
 
-// 更新元数据
+/*
+将原数据写入文件
+@params meta: 元数据
+@return error:
+*/
 func WriteContainerMeta(meta *ContainerMeta) error {
 
 	data, _ := json.Marshal(meta)
@@ -91,6 +116,11 @@ func WriteContainerMeta(meta *ContainerMeta) error {
 	return nil
 }
 
+/*
+删除容器元数据
+@params name: 容器名
+@return error:
+*/
 func DeleteContainerMeta(name string) {
 	metaPath := GetMetaPath(name)
 	if err := os.RemoveAll(metaPath); err != nil {
@@ -99,6 +129,12 @@ func DeleteContainerMeta(name string) {
 
 }
 
+/*
+获取容器元信息
+@params name: 容器名
+@return *ContainerMeta: 容器元信息
+@return error:
+*/
 func GetContainerMeta(name string) (*ContainerMeta, error) {
 	p := path.Join(setting.EContainerMetaDataPath, name, ConfigName)
 	c, err := ioutil.ReadFile(p)
@@ -115,20 +151,28 @@ func GetContainerMeta(name string) (*ContainerMeta, error) {
 	return meta, nil
 }
 
-func UpdateContainerStatus(name, status string) error {
+/*
+更新容器状态
+@params name: 容器名
+@params status: 容器状态
+@return error:
+*/
+func UpdateContainerStatus(name string, status ContainerStatus) error {
 	meta, err := GetContainerMeta(name)
 	if err != nil {
 		logrus.Errorf("UpdateContainerStatus.GetContainerMeta | %v", err)
 		return errors.WithMessage(err, "UpdateContainerStatus.GetContainerMeta")
 	}
-	meta.Status = STOP
+	meta.Status = string(status)
 	return WriteContainerMeta(meta)
 }
 
-const (
-	RUNNING = "running"
-	STOP    = "stop"
-	EXIT    = "exited"
+type ContainerStatus string
 
-	ConfigName = "config.json"
+const (
+	RUNNING ContainerStatus = "running"
+	STOP                    = "stop"
+	EXIT                    = "exited"
 )
+
+const ConfigName = "config.json"

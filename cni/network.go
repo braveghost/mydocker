@@ -59,9 +59,14 @@ func CreateNetwork(driver, subnet, name string) error {
 	return nw.dump()
 }
 
-// 链接网络
-func ConnectNetwork(name string, meta *container.ContainerMeta) error {
-	nw, ok := networks[name]
+/*
+链接网络
+@params name: 网络名
+@params meta: 元数据
+@return error:
+*/
+func ConnectNetwork(meta *container.ContainerMeta) error {
+	nw, ok := networks[meta.Network]
 	if !ok {
 		logrus.Errorf("ConnectNetwork.Get.Network | %v", ErrNotFoundNetwork)
 
@@ -85,7 +90,7 @@ func ConnectNetwork(name string, meta *container.ContainerMeta) error {
 	}
 	// 创建网络端点
 	ep := &Endpoint{
-		ID:          fmt.Sprintf("%s-%s", meta.Id, name),
+		ID:          fmt.Sprintf("%s-%s", meta.Id, meta.Network),
 		IpAddress:   ip,
 		MacAddress:  net.HardwareAddr("MAC-" + utils.GetSnowId()),
 		PortMapping: meta.PortMapping,

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"mydocker/command"
 	"os"
 
-	log "github.com/sirupsen/logrus"
+	"mydocker/command"
+
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -16,13 +17,12 @@ func main() {
 	app.Usage = usage
 	app.Commands = command.Commands
 	app.Before = func(ctx *cli.Context) error {
-		log.SetFormatter(&log.JSONFormatter{})
-		log.SetOutput(os.Stdout)
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+		logrus.SetOutput(os.Stdout)
 		return nil
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
-
 }

@@ -1,13 +1,11 @@
 package command
 
 import (
-	"mydocker/cni"
-	"os"
-	"strings"
-
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"mydocker/cni"
+	"os"
 
 	"mydocker/container"
 	"mydocker/images"
@@ -15,7 +13,9 @@ import (
 )
 
 var (
-	// 运行
+	/*
+		运行一个容器
+	*/
 	runCommand = cli.Command{
 		Name: "run",
 		Usage: `Create a container with namespace and cgroups limit
@@ -23,59 +23,30 @@ var (
 		SkipFlagParsing: false,
 		Flags: []cli.Flag{
 			// 后台运行
-			cli.BoolFlag{
-				Name:  "d",
-				Usage: "detach container",
-			},
+			cli.BoolFlag{Name: "d", Usage: "detach container"},
 			// 前台等待运行
-			cli.BoolFlag{
-				Name:  "ti",
-				Usage: "enable tty",
-			},
+			cli.BoolFlag{Name: "ti", Usage: "enable tty"},
 			// 指定镜像名称
-			cli.StringFlag{
-				Name:  "image",
-				Usage: "image name",
-			},
-			// 卷
-			cli.StringFlag{
-				Name:  "v",
-				Usage: "volumes",
-			},
+			cli.StringFlag{Name: "image", Usage: "image name"},
+			// 存储卷
+			cli.StringFlag{Name: "v", Usage: "volumes"},
 			// 容器名称
-			cli.StringFlag{
-				Name:  "name",
-				Usage: "container name",
-			},
-
-			cli.StringFlag{
-				Name:  "m",
-				Usage: "memory limit",
-			},
-			cli.StringFlag{
-				Name:  "cpushare",
-				Usage: "cpushare limit",
-			},
-			cli.StringFlag{
-				Name:  "cpuset",
-				Usage: "cpuset limit",
-			},
-			cli.StringSliceFlag{
-				Name:  "e",
-				Usage: "set environment",
-			},
-			cli.StringSliceFlag{
-				Name:  "p",
-				Usage: "port",
-			},
-			cli.StringFlag{
-				Name:  "net",
-				Usage: "network",
-			},
+			cli.StringFlag{Name: "name", Usage: "container name"},
+			// 内存限制
+			cli.StringFlag{Name: "m", Usage: "memory limit"},
+			// cpu限制
+			cli.StringFlag{Name: "cpushare", Usage: "cpushare limit"},
+			// cpu限制
+			cli.StringFlag{Name: "cpuset", Usage: "cpuset limit"},
+			// 设置网络
+			cli.StringFlag{Name: "net", Usage: "network"},
+			// 设置环境变量
+			cli.StringSliceFlag{Name: "e", Usage: "set environment"},
+			// 设置端口号
+			cli.StringSliceFlag{Name: "p", Usage: "port"},
 		},
 		Action: func(ctx *cli.Context) error {
 			// 启动容器
-
 			ttl := ctx.Bool("ti")
 			detach := ctx.Bool("d")
 			if ttl && detach {
@@ -90,27 +61,28 @@ var (
 				arr = append(arr, v)
 			}
 
-			Run(
-				&RunArgs{
-					Tty:         ttl,
-					CmdArray:    arr,
-					Image:       ctx.String("image"),
-					Volume:      ctx.String("v"),
-					Name:        ctx.String("name"),
-					Env:         ctx.StringSlice("e"),
-					NetworkName: ctx.String("net"),
-					Ports:       ctx.StringSlice("p"),
-					ResourceConfig: &subsystems.ResourceConfig{
-						MemoryLimit: ctx.String("m"),
-						CpuSet:      ctx.String("cpuset"),
-						CpuShare:    ctx.String("cpushare"),
-					},
-				})
+			Run(&RunArgs{
+				Tty:         ttl,
+				CmdArray:    arr,
+				Image:       ctx.String("image"),
+				Volume:      ctx.String("v"),
+				Name:        ctx.String("name"),
+				Env:         ctx.StringSlice("e"),
+				NetworkName: ctx.String("net"),
+				Ports:       ctx.StringSlice("p"),
+				ResourceConfig: &subsystems.ResourceConfig{
+					MemoryLimit: ctx.String("m"),
+					CpuSet:      ctx.String("cpuset"),
+					CpuShare:    ctx.String("cpushare"),
+				},
+			})
 			return nil
 		},
 	}
 
-	// 初始化容器
+	/*
+		初始化容器
+	*/
 	initCommand = cli.Command{
 		Name:            "init",
 		Usage:           "Init container process run user's rocess in container.Do not call it outside",
@@ -118,12 +90,13 @@ var (
 		Action: func(ctx *cli.Context) error {
 			// 容器初始化
 			log.Infof("init come on | %v", ctx.Args())
-
 			return container.RunContainerInitProcess()
 		},
 	}
 
-	// 删除
+	/*
+		删除容器
+	*/
 	rmCommand = cli.Command{
 		Name:            "rm",
 		Usage:           "rm container",
@@ -141,7 +114,9 @@ var (
 		},
 	}
 
-	// ps命令
+	/*
+		容器列表
+	*/
 	listCommand = cli.Command{
 		Name:            "ps",
 		Usage:           "list container",
@@ -152,14 +127,15 @@ var (
 		},
 	}
 
-	// 侵入容器执行命令
+	/*
+		侵入容器执行命令
+	*/
 	execCommand = cli.Command{
 		Name:            "exec",
 		Usage:           "exec",
 		SkipFlagParsing: false,
 		Action: func(ctx *cli.Context) error {
 			log.Infof("exec come on | %v", ctx.Args())
-
 			// 如果环境变量不为空就返回
 			if os.Getenv(container.ENV_EXEC_PID) != "" {
 				log.Errorf("pid callback pid | %d", os.Getgid())
@@ -175,7 +151,10 @@ var (
 			return container.ExecContainer(name, args.Tail())
 		},
 	}
-	// 查看日志
+
+	/*
+		查看容器日志
+	*/
 	logsCommand = cli.Command{
 		Name:            "logs",
 		Usage:           "show container log",
@@ -199,7 +178,10 @@ var (
 			return container.LogsContainer(name)
 		},
 	}
-	// 构建镜像
+
+	/*
+		构建镜像
+	*/
 	commitCommand = cli.Command{
 		Name:            "commit",
 		Usage:           "build images",
@@ -220,7 +202,9 @@ var (
 		},
 	}
 
-	// 停止容器
+	/*
+		停止容器
+	*/
 	stopCommand = cli.Command{
 		Name:            "stop",
 		Usage:           "stop container",
@@ -228,7 +212,7 @@ var (
 
 
 		Action: func(ctx *cli.Context) error {
-			// 容器删除
+			// 容器停止
 			log.Infof("stop come on | %v", ctx.Args())
 			args := ctx.Args()
 			if len(args) != 1 {
@@ -239,20 +223,28 @@ var (
 			return container.StopContainer(args[0])
 		},
 	}
-	// 创建网络
+
+	/*
+		网络
+	*/
 	networkCommand = cli.Command{
 		Name:  "network",
 		Usage: "network",
 
 		Subcommands: []cli.Command{
+			/*
+				创建网络
+			*/
 			{
 				Name:  "create",
 				Usage: "create a container network",
 				Flags: []cli.Flag{
+					// 指定网络驱动
 					cli.StringFlag{
 						Name:  "driver",
 						Usage: "network driver",
 					},
+					// 指定网络cidr
 					cli.StringFlag{
 						Name:  "subnet",
 						Usage: "subnet cidr",
@@ -272,6 +264,9 @@ var (
 					return nil
 				},
 			},
+			/*
+				查询网络列表
+			*/
 			{
 				Name:  "list",
 				Usage: "list container network",
@@ -283,6 +278,9 @@ var (
 					return nil
 				},
 			},
+			/*
+				移除网络
+			*/
 			{
 				Name:  "remove",
 				Usage: "remove container network",
@@ -305,79 +303,6 @@ var (
 	}
 )
 
-type RunArgs struct {
-	Tty            bool
-	CmdArray       []string
-	Image          string
-	Volume         string
-	Name           string
-	Env            []string
-	NetworkName    string
-	Ports          []string
-	ResourceConfig *subsystems.ResourceConfig
-}
-
-func Run(args *RunArgs) {
-	log.Infof("Run.Params | %v | %v | %v | %s", args.Tty, args.CmdArray, args.ResourceConfig, args.Image)
-	meta, _ := container.GetContainerMeta(args.Name)
-
-	if meta != nil {
-		log.Warnf("Run.ContainerExist | %v | %v | %v | %s | %v", args.Tty, args.CmdArray, args.ResourceConfig, args.Image, meta)
-		return
-	}
-
-	parent, writePipe := container.NewParentProcess(args.Tty, args.Volume, args.Image, args.Name, args.Env)
-	if parent == nil {
-		log.Errorf("New parent process error")
-		return
-	}
-	if err := parent.Start(); err != nil {
-		log.Errorf("Run.Error | %v | %v", err, parent)
-		return
-	}
-	//cgroupManger := cgroup.NewCGroupManager("mydocker-cgroup")
-	//defer func() {
-	//
-	//	if err := cgroupManger.Destroy(); err != nil {
-	//		log.Errorf("Run.Destroy | %v", err)
-	//	}
-	//}()
-	//if err := cgroupManger.Set(res); err != nil {
-	//	log.Errorf("Run.Set | %v", err)
-	//
-	//}
-	//if err := cgroupManger.Apply(parent.Process.Pid); err != nil {
-	//	log.Errorf("Run.Apply | %v", err)
-	//
-	//}
-
-	meta = container.NewContainerMeta(parent.Process.Pid, args.Name, args.Image, args.Volume, args.CmdArray, args.Ports)
-	if len(args.NetworkName) != 0 {
-		_ = cni.InitNetworkList()
-		err := cni.ConnectNetwork(args.NetworkName, meta)
-		if err != nil {
-			log.Errorf("Run.ConnectNetwork | %v", err)
-			return
-		}
-	}
-
-	if  err := container.RecordContainerMeta(meta); err != nil {
-		log.Errorf("Run.RecordContainerMeta | %v", err)
-		return
-	}
-
-	sendInitCommand(args.CmdArray, writePipe)
-	if args.Tty {
-		// ti参数前台等待
-		// 前台等待台运行
-		log.Infof("Run.Wait | %v", parent.Wait())
-		_, workUrl := images.GetWriteWorkLayerOverlay(args.Name)
-		container.DeleteWorkSpace(workUrl, args.Volume)
-		_ = container.UpdateContainerStatus(args.Name, container.STOP)
-		//container.DeleteContainerMeta(cname)
-	}
-}
-
 var Commands = []cli.Command{
 	initCommand,    // 初始化容器
 	runCommand,     // 运行容器
@@ -388,14 +313,4 @@ var Commands = []cli.Command{
 	execCommand,    // 执行命令
 	stopCommand,    // 停止容器
 	networkCommand, // 创建网络
-}
-
-func sendInitCommand(comArray []string, writePipe *os.File) {
-	command := strings.Join(comArray, " ")
-	log.Infof("command all is %s", command)
-	n, err := writePipe.WriteString(command)
-	if err != nil {
-		log.Errorf("sendInitCommand.ERROR | %v | %v", n, err)
-	}
-	log.Infof("sendInitCommand.Info | %v", writePipe.Close())
 }

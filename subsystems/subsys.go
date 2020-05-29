@@ -2,6 +2,7 @@ package subsystems
 
 import (
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path"
@@ -17,6 +18,7 @@ func (m MemorySubSystem) Name() string {
 
 func (m MemorySubSystem) Set(cgroupPath string, res *ResourceConfig) error {
 	subSysCgroupPath, err := GetCGroupPath(m.Name(), cgroupPath, true)
+	logrus.Infof("MemorySubSystem.Set | %v | %v", subSysCgroupPath, err)
 	if err == nil {
 		if len(res.MemoryLimit) != 0 {
 			//设置这个 cgroup 的内存限制，即将限制写入到 cgroup 对应目录的 memory.limit in bytes 文件中
@@ -35,6 +37,7 @@ func (m MemorySubSystem) Apply(cgroupPath string, pid int) error {
 	if err != nil {
 		return errors.WithMessage(err, "MemorySubSystem.Apply.GetCGroupPath.Error")
 	}
+	logrus.Infof("MemorySubSystem.CgroupPath | %v | %v", []byte(strconv.Itoa(pid)),strconv.Itoa(pid))
 	if err := ioutil.WriteFile(path.Join(subSysCgroupPath, "tasks"), []byte(strconv.Itoa(pid)), 0644); err != nil {
 		return errors.WithMessage(err, "MemorySubSystem.Apply.WriteFile.Error")
 	}
